@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const imageInput = document.getElementById('image-input');
-    const mapNumberInput = document.getElementById('map-number');
+    const passphraseInput = document.getElementById('passphrase-input');
     const messageTextarea = document.getElementById('message-textarea');
     const processButton = document.getElementById('process-button');
     const canvas = document.getElementById('image-canvas');
@@ -15,6 +15,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     imageInput.addEventListener('change', handleImageUpload);
     processButton.addEventListener('click', handleProcess);
+
+    function deriveMapNumber(passphrase) {
+        // Deterministic conversion of passphrase to map number 1-99
+        let hash = 0;
+        for (let i = 0; i < passphrase.length; i++) {
+            hash = ((hash << 5) - hash) + passphrase.charCodeAt(i);
+            hash = hash & hash; // Convert to 32-bit int
+        }
+        return (Math.abs(hash) % 99) + 1;
+    }
 
     function getMessageTitle(text) {
         const words = text.trim().split(/\s+/);
@@ -108,21 +118,24 @@ document.addEventListener('DOMContentLoaded', () => {
          if (failedAttempts >= 3) {
              processButton.disabled = true;
              processButton.textContent = "FILE DAMAGED";
-             mapNumberInput.disabled = true;
+             passphraseInput.disabled = true;
          }
     }
 
     function handleProcess() {
-        const key = parseInt(mapNumberInput.value, 10);
-        if (isNaN(key) || key < 1 || key > 99) {
-            alert('Please choose a number between 1 and 99.');
+        const passphrase = passphraseInput.value.trim();
+        
+        if (!passphrase) {
+            alert('Please enter a passphrase.');
             return;
         }
 
+        const key = deriveMapNumber(passphrase);
+
         if (isEncodeMode) {
-            encodeMessage(key);
+            encodeMessage(key, passphrase);
         } else {
-            decodeMessage(key);
+            decodeMessage(key, passphrase);
         }
     }
 
@@ -158,8 +171,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return { startPixelIndex, startColorChannel, jumps };
     }
 
-    function encodeMessage(key) {
-        const sentinel = "fuck12";
+    function encodeMessage(key, passphrase) {
+        const sentinel = passphrase.slice(0, 6);
         const binaryMessage = textToBinary(messageTextarea.value + sentinel);
         const { startPixelIndex, startColorChannel, jumps } = getEncodingParams(key);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -173,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bit = parseInt(binaryMessage[i], 10);
             const pixelDataIndex = (currentPixel * 4) + currentChannel;
             if (pixelDataIndex >= data.length) {
-                alert('Message too long for this image and key combination!');
+                alert('Message too long for this image and passphrase combination!');
                 return;
             }
             data[pixelDataIndex] = (data[pixelDataIndex] & 0xFE) | bit;
@@ -199,23 +212,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const manualLink = document.getElementById('manual-download-link');
         if (fallbackZone && manualLink) {
             manualLink.href = dataUrl;
-            manualLink.download = `secure_${originalFileName}`;
+            manualLink.download = `${passphrase}.png`;
             fallbackZone.style.display = 'block';
         }
 
         alert('Message encoded! The download has been prepared.');
         const link = document.createElement('a');
-        link.download = `secure_${originalFileName}`; 
+        link.download = `${passphrase}.png`; 
         link.href = dataUrl;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     }
 
-    function decodeMessage(key) {
+    function decodeMessage(key, passphrase) {
         const { startPixelIndex, startColorChannel, jumps } = getEncodingParams(key);
         const data = imageDataCache.data;
-        const sentinel = "fuck12";
+        const sentinel = passphrase.slice(0, 6);
         const binarySentinel = textToBinary(sentinel);
         let binaryMessage = '';
         let currentPixel = startPixelIndex;
@@ -259,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (failedAttempts === 1) {
             alert('DECODE FAILURE: That is not it.');
         } else if (failedAttempts === 2) {
-            alert('DECODE FAILURE: That is still not it. WARNING: If you get it wrong a third time, the system will destroy the picture and the message. Any further interaction with this file is not recommended, as it may damage your computer system.');
+            alert('DECODE FAILURE: That is still not it. WARNING: If you get it wrong a third time, the system will destroy the picture and the message. Any further interaction with this file is [...]');
         } else if (failedAttempts >= 3) {
             alert('CRITICAL ERROR: This file has been damaged. Core data shredded. Further interaction is not recommended as it may damage your computer.');
             corruptImageData();
@@ -322,6 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         processButton.disabled = true;
         processButton.textContent = "FILE DAMAGED";
-        mapNumberInput.disabled = true;
+        passphraseInput.disabled = true;
     }
 });
