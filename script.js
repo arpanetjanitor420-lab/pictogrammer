@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset the display status of the mobile fallback link container on new uploads
         const fallbackZone = document.getElementById('download-fallback-zone');
         if (fallbackZone) fallbackZone.style.display = 'none';
+
         if (markerFound) {
             isEncodeMode = false;
             messageTextarea.style.display = 'none';
@@ -106,15 +107,15 @@ document.addEventListener('DOMContentLoaded', () => {
             messageTextarea.placeholder = `Enter message to hide (Max chars: ${capacity})...`;
             processButton.textContent = 'Encode Message';
         }
+         canvas.style.display = 'block';
+         canvas.style.visibility = 'visible';
          
-         // Standardized state tracking via class lists instead of inline style injection
-         canvas.classList.add('visible');
          if (canvas.parentElement) {
-             canvas.parentElement.classList.add('active');
+             canvas.parentElement.style.width = 'fit-content';
+             canvas.parentElement.style.margin = '1em auto';
          }
          
          if (failedAttempts >= 3) {
- {
              processButton.disabled = true;
              processButton.textContent = "FILE DAMAGED";
              passphraseInput.disabled = true;
@@ -337,3 +338,4 @@ document.addEventListener('DOMContentLoaded', () => {
         passphraseInput.disabled = true;
     }
 });
+
