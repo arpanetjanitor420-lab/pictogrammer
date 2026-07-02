@@ -1,4 +1,4 @@
-/* 2024-08-03: Overhauled stylesheet for responsive layout as per Task 4.3. */
+by/* 2024-08-03: Overhauled stylesheet for responsive layout as per Task 4.3. */
 
 /* --- General Body and Structure (Mobile-First) --- */
 body {
@@ -140,4 +140,15 @@ h1 { text-transform: uppercase; letter-spacing: 3px; }
     text-transform: uppercase;
     cursor: pointer;
     transition: background-color 0.2s;
+}
+
+/* --- Dynamic JavaScript State Layouts --- */
+.image-container.active {
+    width: fit-content;
+    margin: 1em auto;
+}
+
+.image-container canvas.visible {
+    display: block;
+    visibility: visible;
 }
