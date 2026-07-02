@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microwave Steganography Tool</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="create-page">
+    <div class="page-wrapper">
+        <h1>Microwave Decoder / Encoder</h1>
+        
+        <div class="game-container">
+            <div id="microwave-container">
+                
+                <div class="image-container">
+                    <input type="file" id="image-input" accept="image/png" style="display: none;">
+                    <button type="button" class="button" onclick="document.getElementById('image-input').click();">Select PNG Image</button>
+                    <canvas id="image-canvas"></canvas>
+                </div>
+
+                <div id="microwave-controls">
+                    <div class="control-group">
+                        <label id="map-label">Sequence Map Number (1-99):</label>
+                        <div class="inline-input-row">
+                            <input type="number" id="map-number" min="1" max="99" value="1">
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="message-textarea" style="display: none;">Message:</label>
+                        <textarea id="message-textarea" style="display: none;"></textarea>
+                    </div>
+
+                    <div id="download-fallback-zone" style="display: none; margin: 10px auto; text-align: center;">
+                        <p style="color: #00ff00; font-weight: bold; margin-bottom: 8px;">Matrix updated successfully!</p>
+                        <a id="manual-download-link" class="button" style="display: inline-block; text-decoration: none; border-color: #00ff00;">Click Here to Download PNG</a>
+                    </div>
+
+                    <div class="button-container">
+                        <button type="button" id="process-button">Load Image First</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
