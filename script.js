@@ -16,16 +16,12 @@ document.addEventListener('DOMContentLoaded', () => {
     imageInput.addEventListener('change', handleImageUpload);
     processButton.addEventListener('click', handleProcess);
 
-    // Strips spaces instantly as the user types into the input field
-    passphraseInput.addEventListener('input', (e) => {
-        e.target.value = e.target.value.replace(/\s+/g, '');
-    });
-
     function deriveMapNumber(passphrase) {
+        // Deterministic conversion of passphrase to map number 1-99
         let hash = 0;
         for (let i = 0; i < passphrase.length; i++) {
             hash = ((hash << 5) - hash) + passphrase.charCodeAt(i);
-            hash = hash & hash; 
+            hash = hash & hash; // Convert to 32-bit int
         }
         return (Math.abs(hash) % 99) + 1;
     }
@@ -92,6 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const messageLabel = document.querySelector('label[for="message-textarea"]');
+
+        // Reset the display status of the mobile fallback link container on new uploads
         const fallbackZone = document.getElementById('download-fallback-zone');
         if (fallbackZone) fallbackZone.style.display = 'none';
 
@@ -126,11 +124,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleProcess() {
         const passphrase = passphraseInput.value.trim();
+        
         if (!passphrase) {
             alert('Please enter a passphrase.');
             return;
         }
+
         const key = deriveMapNumber(passphrase);
+
         if (isEncodeMode) {
             encodeMessage(key, passphrase);
         } else {
@@ -203,8 +204,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         ctx.putImageData(imageData, 0, 0);
+        
         const dataUrl = canvas.toDataURL('image/png');
         
+        // Populate and reveal permanent download button for environments that block auto-clicks
         const fallbackZone = document.getElementById('download-fallback-zone');
         const manualLink = document.getElementById('manual-download-link');
         if (fallbackZone && manualLink) {
@@ -238,4 +241,100 @@ document.addEventListener('DOMContentLoaded', () => {
             const bit = data[pixelDataIndex] & 1;
             binaryMessage += bit;
 
-            if (binaryMessage.length > 500
+            if (binaryMessage.length > 50000) {
+                break; 
+            }
+
+            if (binaryMessage.endsWith(binarySentinel)) {
+                const decodedText = binaryToText(binaryMessage.slice(0, -binarySentinel.length));
+                alert(`Message Found: ${decodedText}`);
+                
+                const title = getMessageTitle(decodedText);
+                saveTextAsFile(decodedText, `${title}.txt`);
+                
+                failedAttempts = 0;
+                sessionStorage.setItem('microwave_strikes', 0);
+                return;
+            }
+            currentChannel = (currentChannel + 1) % 3;
+            if (currentChannel === 0) {
+                currentPixel += jumps[jumpIndex % 2];
+                jumpIndex++;
+            }
+        }
+        handleFailedAttempt();
+    }
+
+    function handleFailedAttempt() {
+        failedAttempts++;
+        sessionStorage.setItem('microwave_strikes', failedAttempts);
+
+        if (failedAttempts === 1) {
+            alert('DECODE FAILURE: That is not it.');
+        } else if (failedAttempts === 2) {
+            alert('DECODE FAILURE: That is still not it. WARNING: If you get it wrong a third time, the system will destroy the picture and the message. Any further interaction with this file is [...]');
+        } else if (failedAttempts >= 3) {
+            alert('CRITICAL ERROR: This file has been damaged. Core data shredded. Further interaction is not recommended as it may damage your computer.');
+            corruptImageData();
+        }
+    }
+
+    function corruptImageData() {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        const width = canvas.width;
+        const height = canvas.height;
+        const newImageData = ctx.createImageData(width, height);
+        const newData = newImageData.data;
+
+        for (let y = 0; y < height; y++) {
+            let offset = Math.floor(Math.sin(y * 0.1) * 10 + Math.random() * 5);
+            for (let x = 0; x < width; x++) {
+                let sourceX = Math.min(width - 1, Math.max(0, x + offset));
+                let destIdx = (y * width + x) * 4;
+                let srcIdx = (y * width + sourceX) * 4;
+                
+                newData[destIdx] = data[srcIdx] * 0.2; 
+                newData[destIdx + 1] = Math.min(255, data[srcIdx + 1] + 80); 
+                newData[destIdx + 2] = data[srcIdx + 2] * 0.2; 
+                newData[destIdx + 3] = data[srcIdx + 3]; 
+            }
+        }
+        ctx.putImageData(newImageData, 0, 0);
+
+        ctx.strokeStyle = '#00FF00';
+        ctx.lineWidth = 4;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#00FF00';
+
+        const drawLightning = (startX, startY, endX, endY) => {
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            const steps = 25;
+            for (let i = 1; i <= steps; i++) {
+                let nextX = startX + ((endX - startX) * (i / steps)) + (Math.random() - 0.5) * 50;
+                let nextY = startY + ((endY - startY) * (i / steps)) + (Math.random() - 0.5) * 50;
+                ctx.lineTo(nextX, nextY);
+            }
+            ctx.stroke();
+        };
+
+        for (let i = 0; i < 7; i++) {
+            drawLightning(0, Math.random() * height, width, Math.random() * height);
+        }
+
+        const midX = width / 2;
+        const midY = height / 2;
+        for (let i = 0; i < 10; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            let length = Math.random() * (Math.max(width, height) / 2);
+            let destX = midX + Math.cos(angle) * length;
+            let destY = midY + Math.sin(angle) * length;
+            drawLightning(midX, midY, destX, destY);
+        }
+
+        processButton.disabled = true;
+        processButton.textContent = "FILE DAMAGED";
+        passphraseInput.disabled = true;
+    }
+});
